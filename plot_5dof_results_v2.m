@@ -9,7 +9,10 @@ function fig = plot_5dof_results_v2(simOut, metadata)
 
 %% Extrair dados do Dataset do Simulink (logsout ou xout)
 try
-    if simOut.find('logsout')
+    has_logsout = isprop(simOut, 'logsout') && ~isempty(simOut.logsout);
+    has_xout = isprop(simOut, 'xout') && ~isempty(simOut.xout);
+
+    if has_logsout && isa(simOut.logsout, 'Simulink.SimulationData.Dataset') && simOut.logsout.numElements > 0
         logs = simOut.logsout;
         time = logs.get(1).Values.Time;
         % Assumindo que os nomes dos sinais estejam configurados no Simulink
@@ -19,7 +22,7 @@ try
         phi_ur = logs.getElement('phi_ur').Values.Data;
         beta = logs.getElement('beta').Values.Data;
         p = logs.getElement('p').Values.Data;
-    elseif simOut.find('xout')
+    elseif has_xout
         % Fallback para xout se logsout não estiver perfeitamente nomeado
         xout = simOut.xout;
         if isa(xout, 'Simulink.SimulationData.Dataset')
@@ -43,10 +46,10 @@ try
         r = states(:,2);
         phi = states(:,3);
         p = states(:,4);
-        phi_uf = zeros(size(time)); % Placeholder se nao logado no xout
-        phi_ur = zeros(size(time));
+        phi_uf = zeros(size(time, 1), 1); % Placeholder se nao logado no xout
+        phi_ur = zeros(size(time, 1), 1);
     else
-        warning('Nenhum dado (logsout ou xout) encontrado no simOut.');
+        warning('Nenhum dado (logsout ou xout) encontrado no simOut para plotar.');
         return;
     end
 catch ME
