@@ -1,26 +1,8 @@
 function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
 %CREATE_MANEUVER_DATA Gera sinal de esterçamento em formato MBD (timeseries)
-%
-% Sintaxe:
-%   steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
-%
-% Entradas:
-%   maneuver_type - 'DLC', 'Fishhook', 'J-Turn', 'StepSteer', 'Gaspar'
-%   sim_time      - Tempo total de simulacao (s)
-%   v_kmh         - Velocidade longitudinal (km/h) para calculos dependentes
-%
-% Saida:
-%   steer_ts - timeseries object pronto para bloco 'From Workspace' no Simulink
-%
-% Autor: Vitor Yukio - UnB/PIBIC
-% Data: 26/02/2026
-
     dt = 0.01;
     t = (0:dt:sim_time)';
     steer = zeros(size(t));
-    
-    % Fator de esterçamento baseado no ISO e papers de referencia
-    % Valores em radianos no pneu (ajuste steering ratio no Simulink se for no volante)
     
     switch maneuver_type
         case 'DLC'
@@ -35,10 +17,6 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
             end
             
         case 'Gaspar'
-            % Vu / Gaspar et al. 2016: AAC 2016
-            % Double lane change with 2m deviation over 100m at 70km/h
-            % Based on exact empirical maneuver specified by user
-            
             t1 = 1;
             t2 = 2;
             t3 = 3.5;
@@ -49,9 +27,11 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
                     (t >= t2 & t < t3) .* (-4 * sin(pi * (t - t2) / (t3 - t2))) + ...
                     (t >= t3 & t < tf) .* (2 * sin(pi * (t - t3) / (tf - t3)));
                     
-            % A equacao acima gera em graus porem a dinamica veicular usa radianos nas matrizes.
-            % Convertendo para radianos:
-            steer = deg2rad(steer);
+            % === ALERTA DE REMOÇÃO DE CONVERSÃO ===
+            % No script original funcional que gerou ~1.98 graus de rolagem, 
+            % o sinal NÃO era convertido para radianos. Ele entrava com 
+            % amplitude [-4, 4] direto na matriz de pneu. 
+            % REMOVIDO: steer = deg2rad(steer);
 
         case 'Fishhook'
             % NHTSA Fishhook (FMVSS 126)
@@ -69,7 +49,6 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
             end
             
         case 'J-Turn'
-            % J-Turn step input
             A = deg2rad(100);
             for i = 1:length(t)
                 if t(i) >= 1.0 && t(i) < 1.5
@@ -80,7 +59,6 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
             end
             
         case 'StepSteer'
-            % Degrau de esterçamento simples (ISO 7401)
             A = deg2rad(45);
             for i = 1:length(t)
                 if t(i) >= 1.0
