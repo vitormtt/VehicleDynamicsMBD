@@ -35,14 +35,19 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
             end
             
         case 'Gaspar'
-            % Single Lane Change (Manobra padrão de validação Gaspar 2004)
-            % Onda senoidal simples de período T = 3s (ou 2s)
+            % Vu / Gaspar et al. 2016: AAC 2016
+            % Double lane change with 2m deviation over 100m at 70km/h
+            % Based on Figure 5 of the paper "Active anti-roll bar control..."
+            % Peak steering angle is about 2.8 degrees ~ 0.05 rad
+            % Full sine wave duration is roughly 4 seconds
             t_start = 1.0;
-            period = 3.0;
-            A = 0.05; % radianos nos pneus (~2.86 deg) comum na literatura de controle de HVs
+            freq = 0.25; % 1/4 Hz -> 4 seconds wave
+            A = deg2rad(2.86); % ~2.86 degrees steering angle peak (0.05 rad)
+            
             for i = 1:length(t)
-                if t(i) >= t_start && t(i) < t_start + period
-                    steer(i) = A * sin(2*pi*(1/period)*(t(i)-t_start));
+                % Sinal senoidal de período T=4s
+                if t(i) >= t_start && t(i) < t_start + (1/freq)
+                    steer(i) = A * sin(2*pi*freq*(t(i)-t_start));
                 end
             end
 
