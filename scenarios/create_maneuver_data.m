@@ -37,19 +37,21 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
         case 'Gaspar'
             % Vu / Gaspar et al. 2016: AAC 2016
             % Double lane change with 2m deviation over 100m at 70km/h
-            % Based on Figure 5 of the paper "Active anti-roll bar control..."
-            % Peak steering angle is about 2.8 degrees ~ 0.05 rad
-            % Full sine wave duration is roughly 4 seconds
-            t_start = 1.0;
-            freq = 0.25; % 1/4 Hz -> 4 seconds wave
-            A = deg2rad(2.86); % ~2.86 degrees steering angle peak (0.05 rad)
+            % Based on exact empirical maneuver specified by user
             
-            for i = 1:length(t)
-                % Sinal senoidal de período T=4s
-                if t(i) >= t_start && t(i) < t_start + (1/freq)
-                    steer(i) = A * sin(2*pi*freq*(t(i)-t_start));
-                end
-            end
+            t1 = 1;
+            t2 = 2;
+            t3 = 3.5;
+            tf = 5;
+            
+            % Gera os três pulsos da manobra
+            steer = (t >= t1 & t < t2) .* (2 * sin(pi * (t - t1) / (t2 - t1))) + ...
+                    (t >= t2 & t < t3) .* (-4 * sin(pi * (t - t2) / (t3 - t2))) + ...
+                    (t >= t3 & t < tf) .* (2 * sin(pi * (t - t3) / (tf - t3)));
+                    
+            % A equacao acima gera em graus porem a dinamica veicular usa radianos nas matrizes.
+            % Convertendo para radianos:
+            steer = deg2rad(steer);
 
         case 'Fishhook'
             % NHTSA Fishhook (FMVSS 126)
