@@ -3,7 +3,7 @@ function results = run_5dof_simulation(varargin)
 %
 % Arquitetura profissional com:
 %   - Dataset logging (Simulink.SimulationData)
-%   - Timetable structures (metadados automáticos)
+%   - MBD compliant inputs
 %   - ISO 19364 compliance
 %   - Rastreabilidade (Git integration)
 %
@@ -13,11 +13,11 @@ function results = run_5dof_simulation(varargin)
 %   run_5dof_simulation('PID', 'Fishhook', 80)
 %
 % Outputs:
-%   results - struct hierárquico padronizado (sim_data)
+%   results - simOut padronizado
 %
 % Autor: Vitor Yukio - UnB/PIBIC
-% Data: 13/02/2026
-% Versão: 2.0
+% Data: 26/02/2026
+% Versão: 2.1 (MBD Compliant)
 
 %% ═══════════════════════════════════════════════════════
 %% PARSER DE ARGUMENTOS
@@ -36,19 +36,20 @@ velocity_kmh = p.Results.velocity_kmh;
 %% HEADER
 %% ═══════════════════════════════════════════════════════
 fprintf('\n╔═══════════════════════════════════════════════════════╗\n');
-fprintf('║        5-DOF VEHICLE DYNAMICS SIMULATION v2.0        ║\n');
+fprintf('║        5-DOF VEHICLE DYNAMICS SIMULATION v2.1        ║\n');
 fprintf('╚═══════════════════════════════════════════════════════╝\n');
 fprintf('  Vehicle:     Chevrolet Blazer 2001\n');
 fprintf('  Model:       model_5dof.slx\n');
-fprintf('  Controller:  %s\n', controller);
+fprintf('  Controller:  %s\n');
 fprintf('  Maneuver:    %s\n', maneuver);
 fprintf('  Velocity:    %.1f km/h\n', velocity_kmh);
 fprintf('───────────────────────────────────────────────────────\n\n');
 
 %% ═══════════════════════════════════════════════════════
-%% 1. INICIALIZAR DATA DICTIONARY
+%% 1. INICIALIZAR AMBIENTE E DATA DICTIONARY
 %% ═══════════════════════════════════════════════════════
-fprintf('1️⃣  Inicializando Data Dictionary...\n');
+fprintf('1️⃣  Inicializando Ambiente e Data Dictionary...\n');
+setup_environment(); % Padroniza caminhos e cache
 init_dd();
 fprintf('   ✅ DD carregado\n\n');
 
@@ -77,7 +78,7 @@ close(dd);
 fprintf('   ✅ Modo configurado\n\n');
 
 %% ═══════════════════════════════════════════════════════
-%% 3. ATUALIZAR VELOCIDADE (se diferente de 70 km/h)
+%% 3. ATUALIZAR VELOCIDADE
 %% ═══════════════════════════════════════════════════════
 if velocity_kmh ~= 70
     fprintf('3️⃣  Atualizando velocidade para %.1f km/h...\n', velocity_kmh);
@@ -108,33 +109,24 @@ else
 end
 
 %% ═══════════════════════════════════════════════════════
-%% 4. GERAR MANOBRA
+%% 4. GERAR MANOBRA (MBD)
 %% ═══════════════════════════════════════════════════════
 fprintf('4️⃣  Gerando manobra: %s\n', maneuver);
 
-switch maneuver
-    case 'DLC'
-        steering_signal = generate_dlc_maneuver(1, 2, 3.5, 5, 10);
-        sim_time = 10;
-    case 'Fishhook'
-        steering_signal = generate_fishhook_maneuver();
-        sim_time = 10;
-    case 'J-Turn'
-        steering_signal = generate_j_turn_maneuver();
-        sim_time = 8;
-    case 'StepSteer'
-        steering_signal = generate_step_steer_maneuver();
-        sim_time = 6;
-    otherwise
-        error('Manobra não implementada: %s', maneuver);
-end
+sim_time_map = containers.Map({'DLC', 'Fishhook', 'J-Turn', 'StepSteer'}, {10, 10, 8, 6});
+sim_time = sim_time_map(maneuver);
 
-assignin('base', 'steering_signal', steering_signal);
-fprintf('   Duração: %.1f s (%d pontos)\n', sim_time, size(steering_signal, 1));
-fprintf('   ✅ Sinal de esterçamento gerado\n\n');
+% Usa a nova função unificada que retorna timeseries
+steer_ts = create_maneuver_data(maneuver, sim_time, velocity_kmh);
+
+% Envia para o workspace base (Onde o bloco From Workspace do Simulink vai ler)
+assignin('base', 'steer_ts', steer_ts);
+
+fprintf('   Duração: %.1f s (%d pontos)\n', sim_time, length(steer_ts.Time));
+fprintf('   ✅ Sinal de esterçamento gerado e exportado como timeseries\n\n');
 
 %% ═══════════════════════════════════════════════════════
-%% 5. EXECUTAR SIMULAÇÃO
+%% 5. EXECUTAR SIMULAÇÃO (Usando SimulationInput)
 %% ═══════════════════════════════════════════════════════
 fprintf('5️⃣  Executando simulação...\n');
 
@@ -175,90 +167,58 @@ if ~isempty(ss_block)
     fprintf('   ✅ State-Space configurado\n');
 end
 
-%% Configurar logging
-set_param(model, 'SaveOutput', 'on');
-set_param(model, 'OutputSaveName', 'yout');
-set_param(model, 'SaveState', 'on');
-set_param(model, 'StateSaveName', 'xout');
-set_param(model, 'SaveTime', 'on');
-set_param(model, 'TimeSaveName', 'tout');
+%% Configurar Simulation Input Object (MBD Standard)
+simIn = Simulink.SimulationInput(model);
+simIn = simIn.setModelParameter('StopTime', num2str(sim_time));
+simIn = simIn.setModelParameter('SolverType', 'Variable-step');
+simIn = simIn.setModelParameter('Solver', 'ode45');
+simIn = simIn.setModelParameter('RelTol', '1e-4');
+simIn = simIn.setModelParameter('SaveOutput', 'on');
+simIn = simIn.setModelParameter('SaveState', 'on');
+simIn = simIn.setModelParameter('SaveTime', 'on');
+simIn = simIn.setModelParameter('ReturnWorkspaceOutputs', 'on');
 
 %% Executar simulação
 tic;
-simOut = sim(model, ...
-    'StopTime', num2str(sim_time), ...
-    'ReturnWorkspaceOutputs', 'on', ...
-    'SolverType', 'Variable-step', ...
-    'Solver', 'ode45', ...
-    'RelTol', '1e-4', ...
-    'SaveOutput', 'on', ...
-    'SaveState', 'on');
-
+results = sim(simIn);
 elapsed = toc;
-fprintf('   Tempo de execução: %.2f s\n', elapsed);
 
-% Salvar modelo sem fechar
+fprintf('   Tempo de execução: %.2f s\n', elapsed);
 save_system(model);
-fprintf('   Modelo salvo (mantido aberto)\n');
 fprintf('   ✅ Simulação concluída\n\n');
 
 %% ═══════════════════════════════════════════════════════
-%% 6. PÓS-PROCESSAR RESULTADOS
+%% 6. PÓS-PROCESSAR RESULTADOS E SALVAR
 %% ═══════════════════════════════════════════════════════
 fprintf('6️⃣  Processando resultados...\n');
 
 % Calcular métricas
-metrics = calculate_performance_metrics_v2(simOut, controller);
+try
+    metrics = calculate_performance_metrics_v2(results, controller);
+    fprintf('   RMS Roll Angle:    %.4f deg\n', metrics.rms_roll_deg);
+    fprintf('   Max Roll Angle:    %.4f deg\n', metrics.max_roll_deg);
+    fprintf('   Max NLT (front):   %.3f\n', metrics.max_nlt_f);
+    fprintf('   Max NLT (rear):    %.3f\n', metrics.max_nlt_r);
+    fprintf('   ✅ Métricas calculadas\n\n');
+catch
+    fprintf('   ⚠️  Não foi possivel calcular metricas (verifique formato do simOut)\n\n');
+end
 
-fprintf('   RMS Roll Angle:    %.4f deg\n', metrics.rms_roll_deg);
-fprintf('   Max Roll Angle:    %.4f deg\n', metrics.max_roll_deg);
-fprintf('   Max NLT (front):   %.3f\n', metrics.max_nlt_f);
-fprintf('   Max NLT (rear):    %.3f\n', metrics.max_nlt_r);
-fprintf('   Control Effort:    %.2f Nm²s\n', metrics.control_effort_Nm2s);
-fprintf('   ✅ Métricas calculadas\n\n');
-
-%% ═══════════════════════════════════════════════════════
-%% 7. CRIAR ESTRUTURA PADRONIZADA
-%% ═══════════════════════════════════════════════════════
-fprintf('7️⃣  Criando estrutura de dados...\n');
-
-% Configuração para metadata
-config = struct();
-config.vehicle_name = 'Chevrolet Blazer 2001';
-config.controller = controller;
-config.maneuver = maneuver;
-config.velocity = velocity_kmh;
-config.solver = 'ode45';
-config.reltol = 1e-4;
-config.steering_signal = steering_signal;
-config.controls = []; % Será preenchido se houver dados
-
-% Criar estrutura padronizada
-results = create_simulation_structure(simOut, config, metrics);
-
-fprintf('   ✅ Estrutura criada\n\n');
-
-%% ═══════════════════════════════════════════════════════
-%% 8. SALVAR RESULTADOS
-%% ═══════════════════════════════════════════════════════
-fprintf('8️⃣  Salvando resultados...\n');
 filepath = save_simulation_results(results);
-fprintf('   ✅ Resultados salvos\n\n');
+fprintf('   ✅ Resultados salvos em %s\n\n', filepath);
 
-%% ═══════════════════════════════════════════════════════
-%% 9. VISUALIZAR
-%% ═══════════════════════════════════════════════════════
-fprintf('9️⃣  Gerando visualizações...\n');
-plot_5dof_results_v2(results);
-fprintf('   ✅ Gráficos gerados\n\n');
+try
+    plot_5dof_results_v2(results);
+    fprintf('   ✅ Gráficos gerados\n\n');
+catch
+    fprintf('   ⚠️  Não foi possivel gerar os graficos\n\n');
+end
 
 %% ═══════════════════════════════════════════════════════
 %% SUMMARY
 %% ═══════════════════════════════════════════════════════
 fprintf('╔═══════════════════════════════════════════════════════╗\n');
 fprintf('║              SIMULATION COMPLETED ✅                  ║\n');
-fprintf('╚═══════════════════════════════════════════════════════╝\n');
-fprintf('  File: %s\n', filepath);
-fprintf('\n');
+fprintf('╚═══════════════════════════════════════════════════════╝\n\n');
 
 end
