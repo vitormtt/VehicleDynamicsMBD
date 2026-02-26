@@ -1,0 +1,225 @@
+═══════════════════════════════════════════════════════════════
+VEHICLE DYNAMICS MBD PROJECT - STATUS REPORT v2.0
+Generated: 13-Feb-2026 16:25:39
+Root: C:\\Users\\vitor\\OneDrive\\UNB\\PIBIC\\AARB\\VehicleDynamicsMBD
+═══════════════════════════════════════════════════════════════
+
+## CONTEXTO DO PROJETO
+
+**Objetivo**: Framework modular MBD para análise de dinâmica veicular,
+desenvolvimento de controladores AARB (PID/LQR/MPC) e validação ISO 19364:2016.
+
+**Veículo**: Chevrolet Blazer 2001 (1905 kg, wheelbase 2.718m)
+**Modelos**: 5-DOF (yaw-roll) → 9-DOF → 14-DOF (completo)
+**Controladores**: Passive, PID, LQR (impl.), MPC (roadmap)
+**Manobras**: DLC (ISO 3888), Fishhook (FMVSS 126), J-Turn, Step Steer
+
+## CONTROLE DE VERSÃO (GIT)
+
+❌ Repositório Git não detectado
+   Recomendação: Inicializar com "git init"
+
+## DEPENDÊNCIAS MATLAB
+
+Toolboxes Requeridas:
+   ✅ Simulink
+   ✅ Control System Toolbox
+   ✅ Simulink Control Design
+   ✅ Optimization Toolbox
+
+Toolboxes Opcionais:
+   ✅ Model Predictive Control Toolbox
+   ✅ Parallel Computing Toolbox
+   ✅ Simulink Code Inspector
+
+## DATA DICTIONARY HEALTH CHECK
+
+✅ vehicle_params.sldd encontrado
+   Tamanho: 4.7 KB
+   Modificado: 13-Feb-2026 16:22:15
+   Entradas: 9
+
+   Entradas Críticas:
+      ✅ vehicle
+      ✅ MAR
+      ✅ A_ativo
+      ✅ B_ativo
+      ✅ ARB_Mode
+
+## MÉTRICAS DE CÓDIGO
+
+Scripts MATLAB:
+   Total:         34 arquivos
+   LOC total:     2818 linhas
+   LOC médio:     83 linhas/arquivo
+   Comentários:   20.5%
+
+Modelos Simulink:
+   Total:         4 modelos
+   Tamanho total: 5.9 MB
+
+## SIMULAÇÕES RECENTES (ÚLTIMAS 7 DIAS)
+
+⏳ Nenhuma simulação recente encontrada
+   Execute: run_5dof_simulation('Passive', 'DLC', 70)
+
+## ARQUITETURA MBD (MAB GUIDELINES)
+
+**Estrutura Unificada**:
+vehicle_params.sldd (ÚNICO)
+  ├── 5dof_model.slx  → Variant: [Passive|PID|LQR]
+  ├── 9dof_model.slx  → Variant: [Passive|PID|LQR|MPC] (futuro)
+  └── 14dof_model.slx → Variant: [Passive|PID|LQR|MPC] (futuro)
+
+**Princípios**:
+- Single Source of Truth: Data Dictionary único
+- Variant Subsystems: 1 modelo .slx por DOF, N controladores
+- Timeseries Logging: Validação ISO 19364
+- Modularidade: Funções utils/ reutilizáveis
+- Nomenclatura: Padronização ativo_states, controls, NLT
+
+## ESTRUTURA DE DIRETÓRIOS
+
+  📁 controllers/
+        🎛️ ARB_ACTIVE_LQR..slx (64.2 KB)
+        🎛️ ARB_ACTIVE_PID..slx (838.8 KB)
+        🔧 create_mpc_controller..m (2.1 KB)
+        🔧 mpc_completo_restricoes..m (5.5 KB)
+        🔧 objective_mpc_tuning..m (1.3 KB)
+        📄 script_and_data_ATIVO_LQR.mlx (35.8 KB)
+        📄 script_and_data_ATIVO_PID.mlx (8.2 KB)
+        📄 script_and_data_PASSIVO.mlx (7.3 KB)
+  📁 data/
+      📁 parameters/
+            🔧 init_dd.m (5.2 KB)
+            💾 vehicle_params.mat (0.4 KB)
+            💾 vehicle_params.sldd (4.7 KB)
+            📄 vehicle_params.sldd.slreqx (3.6 KB)
+  📁 docs/
+      📁 papers/
+            📄 1- VU ET AL IFAC_AAC_2016 version soumise 27 oct 2015..pdf (517.4 KB)
+            📄 2 - SAEpaperprinted..pdf (1612.4 KB)
+            📄 3 - GASPAR 2004..pdf (568.8 KB)
+            📄 TMIEE012_2007 - Copy..pdf (3491.9 KB)
+            📄 TMIEE012_2007..pdf (3491.9 KB)
+  📁 models/
+      📁 components/
+          📁 chassis/
+          📁 suspension/
+          📁 tire/
+      📁 variants/
+          📁 14dof/
+          📁 5dof/
+          📁 9dof/
+          📁 higher_dof/
+  📁 resources/
+      📁 project/
+          📁 NjSPEMsIuLUyIpr2u1Js5bVPsOs/
+          📁 fjRQtWiSIy7hIlj-Kmk87M7s21k/
+          📁 root/
+            📄 Project.xml (0.1 KB)
+            📄 rootp.xml (0.0 KB)
+            📄 uuid-96b7d39a-2e01-4985-8206-52af4d27a85f.xml (0.0 KB)
+  📁 results/
+      📁 14dof/
+      📁 5dof/
+          📁 figures/
+      📁 9dof/
+  📁 scenarios/
+        🔧 generate_dlc_maneuver.m (2.0 KB)
+  📁 utils/
+      📁 data_management/
+            🔧 calculate_performance_metrics_v2.m (1.9 KB)
+            🔧 create_simulation_structure.m (2.4 KB)
+            🔧 extract_states_from_dataset.m (1.0 KB)
+            🔧 plot_5dof_results_v2.m (1.9 KB)
+            🔧 save_simulation_results.m (1.0 KB)
+      📁 signal_processing/
+            🔧 create_controls_timetable.m (0.3 KB)
+            🔧 create_inputs_timetable.m (0.4 KB)
+            🔧 create_states_timetable.m (1.0 KB)
+      📁 simulation/
+      📁 validation/
+      📁 vehicle/
+            🔧 build_active_state_space.m (2.9 KB)
+            🔧 build_truck_model.m (2.3 KB)
+            🔧 calculate_passive_arb.m (1.4 KB)
+            🔧 compute_ss_matrices.m (2.5 KB)
+            🔧 load_vehicle_params.m (4.7 KB)
+            🔧 test_load_vehicle_params.m (1.7 KB)
+        🔧 analyze_results.m (1.7 KB)
+        🔧 cleanup_project.m (5.6 KB)
+        🔧 configure_signal_logging.m (1.0 KB)
+        🔧 generate_project_report.m (18.3 KB)
+  📁 validation/
+    📦 Blank_project.prj (0.2 KB)
+    🔧 calculate_performance_metrics_v2.m (1.9 KB)
+    🔧 compare_simulations.m (2.3 KB)
+    🔧 create_controls_timetable.m (0.6 KB)
+    🔧 create_inputs_timetable.m (0.7 KB)
+    🔧 create_simulation_structure.m (7.5 KB)
+    🔧 create_states_timetable.m (1.4 KB)
+    📄 model_5dof.slxc (5.0 KB)
+    🔧 plot_5dof_results_v2.m (3.6 KB)
+    📝 project_report.txt (1.3 KB)
+    ... (2 mais arquivos)
+
+## ROADMAP E PRIORIDADES
+
+**✅ Concluído**:
+   - Framework core (DD + utils)
+   - 5-DOF model com Variant Subsystem
+   - Controladores Passive, PID, LQR
+   - Manobra DLC (ISO 3888)
+   - Métricas básicas (Roll RMS/Max)
+   - Estrutura de dados ISO 19364
+
+**🚧 Em Desenvolvimento**:
+   - Validação estatística completa (ECDF, Theil U)
+   - Comparação multi-controlador automatizada
+   - Outras manobras (Fishhook, J-Turn, Step Steer)
+   - Batch simulations (sweep velocidades)
+
+**⏳ Planejado (Q1 2026)**:
+   - LQR gain-scheduling (40/70/100 km/h)
+   - MPC adaptativo com restrições
+   - 9-DOF: Suspensão vertical (z, θ, ψ, z_ui)
+   - CI/CD: Model Advisor + Jenkins
+
+**🔮 Futuro (Q2-Q3 2026)**:
+   - 14-DOF: Pacejka Magic Formula 5.2
+   - Co-simulação CarMaker/IPG
+   - HIL: dSPACE MicroAutoBox
+   - Validação experimental (IMU + GPS RTK)
+
+## REFERÊNCIAS BIBLIOGRÁFICAS
+
+[Khalil2019] Khalil, M., et al. "Improving Vehicle Rollover Resistance
+             Using Fuzzy PID Controller of Active Anti-Roll Bar System",
+             SAE Int. J. Passeng. Cars, 2019. DOI: 10.4271/06-12-01-0003
+
+[Vu2016]     Vu, V.T., et al. "H∞/LPV Controller Design for Active Anti-Roll
+             Bar System of Heavy Vehicles", IFAC AAC, 2016.
+
+[Liu2019]    Liu, W., et al. "Shared Control for Active Steering and Active
+             Anti-Roll Bar System", SAE Technical Paper, 2019.
+
+[ISO19364]   ISO 19364:2016 - Passenger cars - Vehicle dynamic simulation
+             and validation - Lateral transient response test methods
+
+## PROJECT HEALTH SCORE
+
+Score Geral: 60/100
+
+   Controle de Versão:  0/20 ❌
+   Arquitetura:         25/25 ✅
+   Código:              20/20 ✅
+   Testes/Simulações:   0/20 ❌
+   Documentação:        15/15 ✅
+
+✅ Projeto em bom estado, pequenas melhorias sugeridas
+
+═══════════════════════════════════════════════════════════════
+FIM DO RELATÓRIO v2.0
+Próxima atualização: 20-Feb-2026
+═══════════════════════════════════════════════════════════════

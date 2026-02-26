@@ -1,0 +1,1 @@
+function tt = create_controls_timetable(time, torques)%%CREATE_CONTROLS_TIMETABLE Timetable para torques ARBif size(torques, 2) ~= 2    error('Torques devem ter 2 colunas [T_front, T_rear]');endtt = timetable(seconds(time), ...    torques(:,1), torques(:,2), ...    'VariableNames', {'T_front', 'T_rear'});tt.Properties.VariableUnits = {'Nm', 'Nm'};end
