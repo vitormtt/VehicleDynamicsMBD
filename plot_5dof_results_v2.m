@@ -7,57 +7,86 @@ function fig = plot_5dof_results_v2(simOut, metadata)
 %
 % Autor: Vitor Yukio - UnB/PIBIC
 
-%% Extrair dados do Dataset do Simulink (logsout ou xout)
+%% Extrair dados do simOut
 try
     has_logsout = isprop(simOut, 'logsout') && ~isempty(simOut.logsout);
     has_xout = isprop(simOut, 'xout') && ~isempty(simOut.xout);
+    has_results = isprop(simOut, 'results') && ~isempty(simOut.results);
 
-    % Se tiver logsout E ele possuir os nomes corretos (ex: 'phi')
+    % Tenta logsout primeiro
     if has_logsout && isa(simOut.logsout, 'Simulink.SimulationData.Dataset') && simOut.logsout.numElements > 0 && ~isempty(simOut.logsout.find('phi'))
         logs = simOut.logsout;
         time = logs.get(1).Values.Time;
         
-        % Tenta extrair os sinais pelo nome
         try
             phi = logs.getElement('phi').Values.Data;
             r = logs.getElement('r').Values.Data;
             beta = logs.getElement('beta').Values.Data;
             p = logs.getElement('p').Values.Data;
             
-            % Unsprung mass pode nao existir no 5-DOF, usa zeros se falhar
             try phi_uf = logs.getElement('phi_uf').Values.Data; catch, phi_uf = zeros(size(time)); end
             try phi_ur = logs.getElement('phi_ur').Values.Data; catch, phi_ur = zeros(size(time)); end
         catch
-            error('Falha ao ler os elementos pelo nome no logsout');
+            error('Falha ao ler elementos pelo nome no logsout');
         end
         
-    elseif has_xout
-        % Fallback Seguro para xout
-        xout = simOut.xout;
-        if isa(xout, 'Simulink.SimulationData.Dataset')
-            % Se xout for um Dataset (comum em blocos State-Space modernos sem nomear sinais)
-            time = xout.get(1).Values.Time;
-            states = xout.get(1).Values.Data;
-        else
-            % Se for matriz direta
-            time = simOut.tout;
-            states = xout;
-        end
+    % Se tiver a variavel customizada 'results' (que o Simulink salva do ToWorkspace)
+    elseif has_results
+        states = simOut.results;
+        time = simOut.tout;
         
-        % Garantir orientacao [T x N]
         if size(states, 1) < size(states, 2)
             states = states';
         end
         
-        % Indices Mapeados (Assumindo state-space: [beta, r, phi, p, ...])
-        beta = states(:,1);
-        r = states(:,2);
-        phi = states(:,3);
-        p = states(:,4);
+        % Indices baseados no modelo 5-DOF State-Space padrao
+        if size(states, 2) >= 6
+            beta = states(:,1);
+            r = states(:,2);
+            phi = states(:,3);
+            p = states(:,4);
+        else
+            % Caso o numero de colunas nao seja esperado
+            error('Matriz results nao tem as 6 colunas esperadas.');
+        end
+        
+        phi_uf = zeros(size(time, 1), 1);
+        phi_ur = zeros(size(time, 1), 1);
+
+    % Fallback para xout
+    elseif has_xout
+        xout = simOut.xout;
+        if isa(xout, 'Simulink.SimulationData.Dataset')
+            time = xout.get(1).Values.Time;
+            states = xout.get(1).Values.Data;
+        else
+            time = simOut.tout;
+            states = xout;
+        end
+        
+        if size(states, 1) < size(states, 2)
+            states = states';
+        end
+        
+        % Verifica se states tem as colunas necessarias
+        if size(states, 2) >= 4
+            beta = states(:,1);
+            r = states(:,2);
+            phi = states(:,3);
+            p = states(:,4);
+        else
+            % Se falhar as colunas, cria array de zeros para nao quebrar a figura
+            warning('Matriz states nao possui as colunas esperadas. Preenchendo com zeros para debug.');
+            beta = zeros(size(time, 1), 1);
+            r = zeros(size(time, 1), 1);
+            phi = zeros(size(time, 1), 1);
+            p = zeros(size(time, 1), 1);
+        end
+        
         phi_uf = zeros(size(time, 1), 1); 
         phi_ur = zeros(size(time, 1), 1);
     else
-        warning('Nenhum dado válido (logsout nomeado ou xout) encontrado no simOut para plotar.');
+        warning('Nenhum dado válido encontrado no simOut para plotar.');
         return;
     end
 catch ME
