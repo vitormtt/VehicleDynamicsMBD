@@ -29,7 +29,8 @@ disp('2. Rodando Caso Base (Passive)...');
 disp('=======================================================');
 % Usamos try-catch para que o script não pare de vez se der erro em uma etapa
 try
-    run_5dof_simulation('Passive', 'Gaspar', 70);
+    % Mudando para 50km/h como o paper base do LQR
+    run_5dof_simulation('Passive', 'Gaspar', 50);
 catch ME
     warning('Erro na simulação Passiva: %s', ME.message);
 end
@@ -39,7 +40,7 @@ disp('=======================================================');
 disp('3. Rodando Caso Ativo (PID)...');
 disp('=======================================================');
 try
-    run_5dof_simulation('PID', 'Gaspar', 70);
+    run_5dof_simulation('PID', 'Gaspar', 50);
 catch ME
     warning('Erro na simulação Ativa: %s', ME.message);
 end
