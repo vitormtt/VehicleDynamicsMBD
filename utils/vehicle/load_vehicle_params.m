@@ -1,21 +1,5 @@
 function vehicle = load_vehicle_params(type)
 %LOAD_VEHICLE_PARAMS Carrega parâmetros do veículo
-%
-% Sintaxe:
-%   vehicle = load_vehicle_params(type)
-%
-% Entradas:
-%   type - String: 'truck' (único suportado)
-%
-% Saídas:
-%   vehicle - Struct com 40 parâmetros físicos
-%
-% Referência:
-%   Gaspar et al. (2004) / Vu et al. (2016)
-%   Single Unit Heavy Vehicle (Caminhão Pesado)
-%
-% Vitor Yukio - UnB/PIBIC - 11/02/2026
-
     switch type
         case 'truck'
             %% Massa e Inércia
@@ -73,8 +57,8 @@ function vehicle = load_vehicle_params(type)
             vehicle.mu = 1.0;       % Coeficiente de aderência (asfalto seco)
             vehicle.g = 9.81;       % Aceleração da gravidade (m/s²)
             
-            %% Operacional
-            vehicle.v = 70 / 3.6;   % Velocidade longitudinal nominal (m/s)
+            %% Operacional - VELOCIDADE DO LQR ORIGINAL = 50km/h!
+            vehicle.v = 50 / 3.6;   % Velocidade longitudinal nominal (m/s)
             
             %% Métricas de Estabilidade
             vehicle.SSF = (vehicle.lw * 2) / (2 * vehicle.h); % Static Stability Factor
