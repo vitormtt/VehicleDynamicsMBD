@@ -31,6 +31,7 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
     kf = vehicle.kf; kr = vehicle.kr;
     bf = vehicle.bf; br = vehicle.br;
     ktf = vehicle.ktf; ktr = vehicle.ktr;
+    Cf = vehicle.Cf; Cr = vehicle.Cr;
     g = 9.81;
     
     % Matriz E (Eq. 10 Vu et al.)
@@ -41,7 +42,7 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
              mur*v*(rr-hu), 0,          br,         0,               0,    -br;
              0,             0,          1,          0,               0,    0];
     
-    % Matriz F (Eq. 10 Vu et al.)
+    % Matriz F (Eq. 10 Vu et al.) - sem forças dos pneus ainda
     F_mat = [0, m*v, 0, 0, 0, 0;
              0, 0,   0, 0, 0, 0;
              0, ms*v*h, ms*g*h - (kf + MAR.f.phi) - (kr + MAR.r.phi), ...
@@ -52,15 +53,30 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
                 0, mur*g*hu - ktr - (kr + MAR.r.phi_u);
              0, 0, 0, -1, 0, 0];
     
-    % Matriz H (steering inputs)
+    % Matriz H_common (Mapeia forças laterais Fyf e Fyr para as equações)
     H_common = [1,  1;
                 lf, -lr;
                 0,  0;
                 -rf, 0;
                 0,  -rr;
                 0,  0];
+                
+    % Matriz M_alpha (Relaciona [Fyf; Fyr] com os estados [beta; r; ...])
+    % Fyf = -Cf*beta - Cf*(lf/v)*r + Cf*delta_f
+    % Fyr = -Cr*beta + Cr*(lr/v)*r + Cr*delta_r
+    M_alpha = [-Cf, -Cf * lf / v, 0, 0, 0, 0;
+               -Cr,  Cr * lr / v, 0, 0, 0, 0];
+               
+    % Incorporando os termos de slip angle (beta e r) na matriz F
+    % Equação: E * x_dot = -F_mat * x + H_common * [Fyf; Fyr] + G * u_control
+    % E * x_dot = -(F_mat - H_common * M_alpha) * x + H_common * diag([Cf, Cr]) * [delta_f; delta_r]
+    F_mat = F_mat - H_common * M_alpha;
     
-    % Matriz G (control inputs)
+    % Matriz H para as entradas de esterçamento [delta_f, delta_r]
+    H_steer = H_common * [Cf, 0; 
+                          0, Cr];
+    
+    % Matriz G (control inputs: Tm_f, Tm_r)
     G = [0, 0;
          0, 0;
          -1, -1;
@@ -70,7 +86,7 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
     
     % Cálculo do espaço de estados
     sys.A = -E_mat \ F_mat;
-    B_passive = E_mat \ H_common;
+    B_passive = E_mat \ H_steer;
     B_control = E_mat \ G;
     sys.B_total = [B_passive, B_control]; % [δf δr Tf Tr]
     sys.C = eye(6);
