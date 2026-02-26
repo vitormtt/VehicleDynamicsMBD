@@ -1,6 +1,5 @@
 function sys = build_passive_state_space(vehicle, MAR, v)
 %BUILD_PASSIVE_STATE_SPACE Constroi o SS do Passivo apenas com [Fyf, Fyr]
-% igual seu codigo original
     % Extração de parâmetros
     m = vehicle.m; ms = vehicle.ms; 
     muf = vehicle.muf; mur = vehicle.mur;
