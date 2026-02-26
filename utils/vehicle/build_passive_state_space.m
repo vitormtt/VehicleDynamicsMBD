@@ -36,6 +36,11 @@ function sys = build_passive_state_space(vehicle, MAR, v)
               0, mur*v*(rr-hu), (kr + MARr_phi),                               br,       0,                                     (-mur*g*hu) - ktr - (kr + MARr_phi_ur); 
               0, 0,             0,                                             -1,       0,                                     0];
               
+    % ===== MATRIZ H_COMMON CORRIGIDA PARA ENTRADA DO VOLANTE ====
+    % O seu modelo espera o ângulo do volante (delta_f) e não as forças dos pneus 
+    % já prontas, ou então a força dos pneus no seu bloco precisa do delta!
+    % Mas vamos usar sua matriz original que depende das forças!
+    
     H_common = [ 1,   1;
                  lf, -lr;
                  0,   0;
