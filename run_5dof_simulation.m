@@ -17,14 +17,14 @@ function results = run_5dof_simulation(varargin)
 %
 % Autor: Vitor Yukio - UnB/PIBIC
 % Data: 26/02/2026
-% Versão: 2.1.1 (MBD Compliant with Metadata fix)
+% Versão: 2.1.2 (MBD Compliant with Gaspar Maneuver)
 
 %% ═══════════════════════════════════════════════════════
 %% PARSER DE ARGUMENTOS
 %% ═══════════════════════════════════════════════════════
 p = inputParser;
 addOptional(p, 'controller', 'PID', @(x) ismember(x, {'Passive', 'PID', 'MPC'}));
-addOptional(p, 'maneuver', 'DLC', @(x) ismember(x, {'DLC', 'Fishhook', 'J-Turn', 'StepSteer'}));
+addOptional(p, 'maneuver', 'DLC', @(x) ismember(x, {'DLC', 'Fishhook', 'J-Turn', 'StepSteer', 'Gaspar'}));
 addOptional(p, 'velocity_kmh', 70, @(x) x>0 && x<200);
 parse(p, varargin{:});
 
@@ -38,7 +38,7 @@ velocity_kmh = p.Results.velocity_kmh;
 fprintf('\n╔═══════════════════════════════════════════════════════╗\n');
 fprintf('║        5-DOF VEHICLE DYNAMICS SIMULATION v2.1        ║\n');
 fprintf('╚═══════════════════════════════════════════════════════╝\n');
-fprintf('  Vehicle:     Chevrolet Blazer 2001\n');
+fprintf('  Vehicle:     Chevrolet Blazer 2001 (or Gaspar Heavy Vehicle)\n');
 fprintf('  Model:       model_5dof.slx\n');
 fprintf('  Controller:  %s\n', controller);
 fprintf('  Maneuver:    %s\n', maneuver);
@@ -61,20 +61,41 @@ fprintf('2️⃣  Configurando controlador: %s\n', controller);
 arb_mode_map = containers.Map({'Passive', 'PID', 'MPC'}, {1, 2, 3});
 arb_mode = arb_mode_map(controller);
 
-% Atualizar ARB_Mode no Data Dictionary
-dd = Simulink.data.dictionary.open('data/parameters/vehicle_params.sldd');
-dDataSect = getSection(dd, 'Design Data');
-arb_entry = find(dDataSect, 'Name', 'ARB_Mode');
+% Usa o DD atual vinculado ao modelo (pode ser o padrao ou o gaspar_params)
+% Primeiro descobre qual DD o modelo esta usando
+model = 'model_5dof';
+model_path = fullfile('models', 'variants', '5dof', [model, '.slx']);
 
-if ~isempty(arb_entry)
-    arb_param = getValue(arb_entry);
-    arb_param.Value = arb_mode;
-    assignin(dDataSect, 'ARB_Mode', arb_param);
-    saveChanges(dd);
-    fprintf('   ARB_Mode = %d (atualizado no DD)\n', arb_mode);
+if ~exist(model_path, 'file')
+    error('Modelo não encontrado: %s', model_path);
 end
 
-close(dd);
+if ~bdIsLoaded(model)
+    load_system(model_path);
+end
+
+dd_name = get_param(model, 'DataDictionary');
+if isempty(dd_name)
+    dd_name = 'vehicle_params.sldd'; % fallback fallback
+end
+
+try
+    dd = Simulink.data.dictionary.open(dd_name);
+    dDataSect = getSection(dd, 'Design Data');
+    arb_entry = find(dDataSect, 'Name', 'ARB_Mode');
+    
+    if ~isempty(arb_entry)
+        arb_param = getValue(arb_entry);
+        arb_param.Value = arb_mode;
+        assignin(dDataSect, 'ARB_Mode', arb_param);
+        saveChanges(dd);
+        fprintf('   ARB_Mode = %d (atualizado em %s)\n', arb_mode, dd_name);
+    end
+    close(dd);
+catch
+    fprintf('   ⚠️  Nao foi possivel atualizar ARB_Mode no dicionario %s\n', dd_name);
+end
+
 fprintf('   ✅ Modo configurado\n\n');
 
 %% ═══════════════════════════════════════════════════════
@@ -82,28 +103,31 @@ fprintf('   ✅ Modo configurado\n\n');
 %% ═══════════════════════════════════════════════════════
 if velocity_kmh ~= 70
     fprintf('3️⃣  Atualizando velocidade para %.1f km/h...\n', velocity_kmh);
-    
-    dd = Simulink.data.dictionary.open('data/parameters/vehicle_params.sldd');
-    dDataSect = getSection(dd, 'Design Data');
-    
-    vehicle = getValue(getEntry(dDataSect, 'vehicle'));
-    MAR = getValue(getEntry(dDataSect, 'MAR'));
-    
-    v_ms = velocity_kmh / 3.6;
-    sys = build_active_state_space(vehicle, MAR, v_ms);
-    
-    A_ativo = getValue(getEntry(dDataSect, 'A_ativo'));
-    A_ativo.Value = sys.A;
-    assignin(dDataSect, 'A_ativo', A_ativo);
-    
-    B_ativo = getValue(getEntry(dDataSect, 'B_ativo'));
-    B_ativo.Value = sys.B_total;
-    assignin(dDataSect, 'B_ativo', B_ativo);
-    
-    saveChanges(dd);
-    close(dd);
-    
-    fprintf('   ✅ Matrizes A/B recalculadas\n\n');
+    try
+        dd = Simulink.data.dictionary.open(dd_name);
+        dDataSect = getSection(dd, 'Design Data');
+        
+        vehicle = getValue(getEntry(dDataSect, 'vehicle'));
+        MAR = getValue(getEntry(dDataSect, 'MAR'));
+        
+        v_ms = velocity_kmh / 3.6;
+        sys = build_active_state_space(vehicle, MAR, v_ms);
+        
+        A_ativo = getValue(getEntry(dDataSect, 'A_ativo'));
+        A_ativo.Value = sys.A;
+        assignin(dDataSect, 'A_ativo', A_ativo);
+        
+        B_ativo = getValue(getEntry(dDataSect, 'B_ativo'));
+        B_ativo.Value = sys.B_total;
+        assignin(dDataSect, 'B_ativo', B_ativo);
+        
+        saveChanges(dd);
+        close(dd);
+        
+        fprintf('   ✅ Matrizes A/B recalculadas no dicionario %s\n\n', dd_name);
+    catch
+        fprintf('   ⚠️  Nao foi possivel recalcular matrizes para %s. Pode ser que este DD nao use SS explicito.\n\n', dd_name);
+    end
 else
     fprintf('3️⃣  Usando velocidade padrão: 70 km/h\n\n');
 end
@@ -113,7 +137,7 @@ end
 %% ═══════════════════════════════════════════════════════
 fprintf('4️⃣  Gerando manobra: %s\n', maneuver);
 
-sim_time_map = containers.Map({'DLC', 'Fishhook', 'J-Turn', 'StepSteer'}, {10, 10, 8, 6});
+sim_time_map = containers.Map({'DLC', 'Fishhook', 'J-Turn', 'StepSteer', 'Gaspar'}, {10, 10, 8, 6, 8});
 sim_time = sim_time_map(maneuver);
 
 % Usa a nova função unificada que retorna timeseries
@@ -130,41 +154,30 @@ fprintf('   ✅ Sinal de esterçamento gerado e exportado como timeseries\n\n');
 %% ═══════════════════════════════════════════════════════
 fprintf('5️⃣  Executando simulação...\n');
 
-model = 'model_5dof';
-model_path = fullfile('models', 'variants', '5dof', [model, '.slx']);
-
-if ~exist(model_path, 'file')
-    error('Modelo não encontrado: %s', model_path);
-end
-
-% Carregar modelo
-if ~bdIsLoaded(model)
-    load_system(model_path);
-    fprintf('   Modelo carregado\n');
-end
-
-%% Configurar State-Space com matrizes numéricas
+%% Configurar State-Space com matrizes numéricas se existirem
 fprintf('   Configurando State-Space...\n');
-
-dd = Simulink.data.dictionary.open('data/parameters/vehicle_params.sldd');
-dDataSect = getSection(dd, 'Design Data');
-
-A_mat = getValue(find(dDataSect, 'Name', 'A_ativo')).Value;
-B_mat = getValue(find(dDataSect, 'Name', 'B_ativo')).Value;
-C_mat = getValue(find(dDataSect, 'Name', 'C_ativo')).Value;
-D_mat = getValue(find(dDataSect, 'Name', 'D_ativo')).Value;
-
-close(dd);
-
-ss_block = find_system(model, 'FollowLinks', 'on', 'LookUnderMasks', 'all', ...
-                       'MatchFilter', @Simulink.match.allVariants, 'BlockType', 'StateSpace');
-if ~isempty(ss_block)
-    set_param(ss_block{1}, 'A', mat2str(A_mat, 15));
-    set_param(ss_block{1}, 'B', mat2str(B_mat, 15));
-    set_param(ss_block{1}, 'C', mat2str(C_mat, 15));
-    set_param(ss_block{1}, 'D', mat2str(D_mat, 15));
-    set_param(ss_block{1}, 'X0', 'zeros(6,1)');
-    fprintf('   ✅ State-Space configurado\n');
+try
+    dd = Simulink.data.dictionary.open(dd_name);
+    dDataSect = getSection(dd, 'Design Data');
+    
+    A_mat = getValue(find(dDataSect, 'Name', 'A_ativo')).Value;
+    B_mat = getValue(find(dDataSect, 'Name', 'B_ativo')).Value;
+    C_mat = getValue(find(dDataSect, 'Name', 'C_ativo')).Value;
+    D_mat = getValue(find(dDataSect, 'Name', 'D_ativo')).Value;
+    close(dd);
+    
+    ss_block = find_system(model, 'FollowLinks', 'on', 'LookUnderMasks', 'all', ...
+                           'MatchFilter', @Simulink.match.allVariants, 'BlockType', 'StateSpace');
+    if ~isempty(ss_block)
+        set_param(ss_block{1}, 'A', mat2str(A_mat, 15));
+        set_param(ss_block{1}, 'B', mat2str(B_mat, 15));
+        set_param(ss_block{1}, 'C', mat2str(C_mat, 15));
+        set_param(ss_block{1}, 'D', mat2str(D_mat, 15));
+        set_param(ss_block{1}, 'X0', 'zeros(6,1)');
+        fprintf('   ✅ State-Space configurado com matrizes numéricas.\n');
+    end
+catch
+    fprintf('   ℹ️  State-Space block nao atualizado via script (Pode estar usando parametros diretos).\n');
 end
 
 %% Configurar Simulation Input Object (MBD Standard)
@@ -195,7 +208,7 @@ fprintf('6️⃣  Processando resultados...\n');
 % Criar Metadados da Simulacao
 metadata = struct();
 metadata.timestamp = now;
-metadata.vehicle = 'Chevrolet Blazer 2001';
+metadata.vehicle = 'Heavy Vehicle (Gaspar 2004) or Blazer';
 metadata.controller = controller;
 metadata.maneuver = maneuver;
 metadata.velocity_kmh = velocity_kmh;
