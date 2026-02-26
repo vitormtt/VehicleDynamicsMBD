@@ -22,16 +22,14 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
             t3 = 3.5;
             tf = 5;
             
-            % Gera os três pulsos da manobra
+            % Gera os três pulsos da manobra em graus
             steer = (t >= t1 & t < t2) .* (2 * sin(pi * (t - t1) / (t2 - t1))) + ...
                     (t >= t2 & t < t3) .* (-4 * sin(pi * (t - t2) / (t3 - t2))) + ...
                     (t >= t3 & t < tf) .* (2 * sin(pi * (t - t3) / (tf - t3)));
                     
-            % === ALERTA DE REMOÇÃO DE CONVERSÃO ===
-            % No script original funcional que gerou ~1.98 graus de rolagem, 
-            % o sinal NÃO era convertido para radianos. Ele entrava com 
-            % amplitude [-4, 4] direto na matriz de pneu. 
-            % REMOVIDO: steer = deg2rad(steer);
+            % PADRÃO MBD: O Workspace DEVE fornecer Radianos!
+            % A matriz de pneu (Cf, Cr) é dada em N/rad.
+            steer = deg2rad(steer);
 
         case 'Fishhook'
             % NHTSA Fishhook (FMVSS 126)
