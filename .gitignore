@@ -1,0 +1,13 @@
+# MATLAB / Simulink auto-generated files
+slprj/
+*.slxc
+*.asv
+*.m~
+*.mex*
+*.mat
+*.log
+build/
+
+# Ignorar resultados de simulação massivos (se houver salvamento em CSV/MAT local)
+data/results/*.mat
+data/results/*.csv
