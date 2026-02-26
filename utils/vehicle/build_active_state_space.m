@@ -18,7 +18,7 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
     tAr = vehicle.tAr; tBr = vehicle.tBr; cr = vehicle.cr;
     g = 9.81;
     
-    % Momentos ARB Passiva (CORREÇÃO CONFORME SEU CÓDIGO)
+    % Momentos ARB Passiva 
     MARf_phi = (4 * kAO_f * ((tAf * tBf) / cf^2));
     MARr_phi = (4 * kAO_r * ((tAr * tBr) / cr^2));
     MARf_phi_uf = -(4 * kAO_f * (tAf^2 / cf^2));
@@ -33,11 +33,12 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
               0,             0,   1,        0,                 0,   0];
               
     % Definição da Matriz F
+    % ATENCAO AOS SINAIS DA LINHA 4 E 5: o termo de gravidade varia!
     F_mat = [ 0, m*v,           0,                                             0,        0,                                     0;
               0, 0,             0,                                             0,        0,                                     0;
               0, ms*v*h,        (ms*g*h) - (kf + MARf_phi) - (kr + MARr_phi), -bf - br, (kf + MARf_phi_uf),                    (kr + MARr_phi_ur);
               0, muf*v*(rf-hu), (kf + MARf_phi),                               bf,       (muf*g*hu) - ktf - (kf + MARf_phi_uf), 0;
-              0, mur*v*(rr-hu), (kr + MARr_phi),                               br,       0,                                     (-mur*g*hu) - ktr - (kr + MARr_phi_ur); % CORREÇÃO: -mur*g*hu
+              0, mur*v*(rr-hu), (kr + MARr_phi),                               br,       0,                                     (-mur*g*hu) - ktr - (kr + MARr_phi_ur); 
               0, 0,             0,                                             -1,       0,                                     0];
               
     % Matriz H (Forças laterais como entradas)
