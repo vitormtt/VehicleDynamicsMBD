@@ -1,0 +1,92 @@
+# =============================================================================
+# .gitignore for MATLAB / Simulink MBD Project
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# MATLAB editor backup and auto-save files
+# ---------------------------------------------------------------------------
+*.asv
+*.m~
+*.mlx~
+
+# ---------------------------------------------------------------------------
+# MATLAB compiled / generated binaries
+# ---------------------------------------------------------------------------
+*.mex*
+*.mexw32
+*.mexw64
+*.mexmaci64
+*.mexglx
+*.mexa64
+
+# ---------------------------------------------------------------------------
+# Simulink cache, code-generation, and build artefacts
+# ---------------------------------------------------------------------------
+/slprj/
+/codegen/
+/cache/
+/build/
+
+# Simulink auto-generated code folders that can appear anywhere in the tree
+slprj/
+codegen/
+
+# ---------------------------------------------------------------------------
+# Large simulation output data (results folders only)
+# results/**/*.mat and results/**/*.csv are ignored;
+# core model data files (data/**/*.mat) are kept via the negation below.
+# ---------------------------------------------------------------------------
+results/
+/results/
+
+# Ignore MAT / CSV files everywhere EXCEPT inside the data/ directory
+*.mat
+!data/**/*.mat
+*.csv
+!data/**/*.csv
+
+# ---------------------------------------------------------------------------
+# Simulink project and model workspace auto-generated files
+# ---------------------------------------------------------------------------
+*.slxc
+*.autosave
+*.bak
+
+# Simulink Data Dictionary backup
+*.sldd~
+
+# ---------------------------------------------------------------------------
+# MATLAB code coverage and profiler output
+# ---------------------------------------------------------------------------
+*.mlcx
+covhtml/
+
+# ---------------------------------------------------------------------------
+# OS-generated files
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------------
+# IDE / editor directories
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---------------------------------------------------------------------------
+# Python byte-code (for any Python side-scripts)
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ---------------------------------------------------------------------------
+# Explicitly keep core project files (override broad rules above if needed)
+# ---------------------------------------------------------------------------
+!*.m
+!*.slx
+!*.sldd
+!*.mlapp
