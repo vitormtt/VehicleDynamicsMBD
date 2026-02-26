@@ -2,9 +2,9 @@
 % Description: Calculate tire lateral forces using slip angles
 function Fy  = tire_forces(u)
     % Descrição das Entradas
-    beta = u(3);        % Ângulo de Deriva
-    psi_dot = u(2);     % Taxa de Guinada
     delta_f = u(1);     % Ângulo de Esterçamento
+    psi_dot = u(2);     % Taxa de Guinada
+    beta = u(3);        % Ângulo de Deriva
     
     % Parâmetros do veículo (Caminhão Pesado)
     lf = 1.95;           % Distância do CG ao eixo dianteiro (m)
@@ -14,7 +14,7 @@ function Fy  = tire_forces(u)
     mu = 1;              % Coeficiente de aderência ao solo
     v = 70 / 3.6;        % Velocidade longitudinal (m/s)
     
-    % Calcular ângulos de deriva
+    % Calcular ângulos de deriva (modelo linear)
     alpha_f = -beta + delta_f - ((lf * psi_dot) / v);
     alpha_r = -beta + ((lr * psi_dot) / v);
     
