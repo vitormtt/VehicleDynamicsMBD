@@ -1,37 +1,61 @@
-function fig = plot_5dof_results_v2(sim_data)
+function fig = plot_5dof_results_v2(simOut, metadata)
 %PLOT_5DOF_RESULTS_V2 Visualização profissional (Publication-ready)
 %
-% Input: sim_data (struct de create_simulation_structure)
+% Input: 
+%   simOut   - objeto Simulink.SimulationOutput
+%   metadata - struct com metadados da simulação
 %
 % Autor: Vitor Yukio - UnB/PIBIC
 
-%% Verificar dados
-if isempty(sim_data.States)
-    warning('Sem dados de estado para plotar');
+%% Extrair dados do Dataset do Simulink (logsout ou xout)
+try
+    if simOut.find('logsout')
+        logs = simOut.logsout;
+        time = logs.get(1).Values.Time;
+        % Assumindo que os nomes dos sinais estejam configurados no Simulink
+        phi = logs.getElement('phi').Values.Data;
+        r = logs.getElement('r').Values.Data;
+        phi_uf = logs.getElement('phi_uf').Values.Data;
+        phi_ur = logs.getElement('phi_ur').Values.Data;
+        beta = logs.getElement('beta').Values.Data;
+        p = logs.getElement('p').Values.Data;
+    elseif simOut.find('xout')
+        % Fallback para xout se logsout não estiver perfeitamente nomeado
+        xout = simOut.xout;
+        time = simOut.tout;
+        % indices aproximados para 5DOF (ajuste conforme seu state-space)
+        phi = xout(:,4); 
+        p = xout(:,5);
+        beta = xout(:,1); % ou uy/vx
+        r = xout(:,2);
+        phi_uf = zeros(size(time)); % Placeholder se nao logado no xout
+        phi_ur = zeros(size(time));
+    else
+        warning('Nenhum dado (logsout ou xout) encontrado no simOut.');
+        return;
+    end
+catch
+    warning('Falha ao extrair dados do simOut para plotagem.');
     return;
 end
 
 %% Criar figura
-fig = figure('Name', sprintf('%s - %s', sim_data.Metadata.controller, sim_data.Metadata.maneuver), ...
+fig = figure('Name', sprintf('%s - %s', metadata.controller, metadata.maneuver), ...
     'Position', [50 50 1400 900], ...
     'Color', 'w');
 
-%% Extrair dados
-tt_states = sim_data.States;
-time = seconds(tt_states.Time);
-
 %% Subplot 1: Roll angle (sprung mass)
 subplot(3,2,1);
-plot(time, rad2deg(tt_states.phi), 'LineWidth', 2.5, 'Color', [0 0.4470 0.7410]);
+plot(time, rad2deg(phi), 'LineWidth', 2.5, 'Color', [0 0.4470 0.7410]);
 grid on;
 xlabel('Time (s)', 'FontSize', 11);
 ylabel('Roll Angle φ (deg)', 'FontSize', 11);
-title(sprintf('%s Controller - Roll Response', sim_data.Metadata.controller), 'FontSize', 12, 'FontWeight', 'bold');
+title(sprintf('%s Controller - Roll Response', metadata.controller), 'FontSize', 12, 'FontWeight', 'bold');
 xlim([0 max(time)]);
 
 %% Subplot 2: Yaw rate
 subplot(3,2,2);
-plot(time, rad2deg(tt_states.r), 'LineWidth', 2.5, 'Color', [0.8500 0.3250 0.0980]);
+plot(time, rad2deg(r), 'LineWidth', 2.5, 'Color', [0.8500 0.3250 0.0980]);
 grid on;
 xlabel('Time (s)', 'FontSize', 11);
 ylabel('Yaw Rate r (deg/s)', 'FontSize', 11);
@@ -40,9 +64,9 @@ xlim([0 max(time)]);
 
 %% Subplot 3: Unsprung roll angles
 subplot(3,2,3);
-plot(time, rad2deg(tt_states.phi_uf), 'LineWidth', 2, 'DisplayName', 'Front');
+plot(time, rad2deg(phi_uf), 'LineWidth', 2, 'DisplayName', 'Front');
 hold on;
-plot(time, rad2deg(tt_states.phi_ur), 'LineWidth', 2, 'DisplayName', 'Rear');
+plot(time, rad2deg(phi_ur), 'LineWidth', 2, 'DisplayName', 'Rear');
 hold off;
 grid on;
 xlabel('Time (s)', 'FontSize', 11);
@@ -53,7 +77,7 @@ xlim([0 max(time)]);
 
 %% Subplot 4: Sideslip angle
 subplot(3,2,4);
-plot(time, rad2deg(tt_states.beta), 'LineWidth', 2.5, 'Color', [0.9290 0.6940 0.1250]);
+plot(time, rad2deg(beta), 'LineWidth', 2.5, 'Color', [0.9290 0.6940 0.1250]);
 grid on;
 xlabel('Time (s)', 'FontSize', 11);
 ylabel('Sideslip β (deg)', 'FontSize', 11);
@@ -62,7 +86,7 @@ xlim([0 max(time)]);
 
 %% Subplot 5: Roll rate
 subplot(3,2,5);
-plot(time, rad2deg(tt_states.p), 'LineWidth', 2.5, 'Color', [0.4940 0.1840 0.5560]);
+plot(time, rad2deg(p), 'LineWidth', 2.5, 'Color', [0.4940 0.1840 0.5560]);
 grid on;
 xlabel('Time (s)', 'FontSize', 11);
 ylabel('Roll Rate p (deg/s)', 'FontSize', 11);
@@ -76,17 +100,20 @@ axis off;
 metrics_text = {
     sprintf('\\bf{Simulation Summary}');
     sprintf('');
-    sprintf('Controller: %s', sim_data.Metadata.controller);
-    sprintf('Maneuver: %s @ %d km/h', sim_data.Metadata.maneuver, round(sim_data.Metadata.velocity_kmh));
+    sprintf('Controller: %s', metadata.controller);
+    sprintf('Maneuver: %s @ %d km/h', metadata.maneuver, round(metadata.velocity_kmh));
     sprintf('');
     sprintf('\\bf{Performance Metrics}');
-    sprintf('Roll RMS: %.4f deg', sim_data.Metrics.rms_roll_deg);
-    sprintf('Roll Max: %.4f deg', sim_data.Metrics.max_roll_deg);
-    sprintf('Exec. Time: %.2f s', sim_data.Metrics.execution_time_s);
-    sprintf('');
-    sprintf('\\bf{Timestamp}');
-    sprintf('%s', datestr(sim_data.Metadata.timestamp, 'dd-mmm-yyyy HH:MM:SS'));
 };
+
+if isfield(metadata, 'metrics')
+    metrics_text{end+1} = sprintf('Roll RMS: %.4f deg', metadata.metrics.rms_roll_deg);
+    metrics_text{end+1} = sprintf('Roll Max: %.4f deg', metadata.metrics.max_roll_deg);
+end
+
+metrics_text{end+1} = sprintf('');
+metrics_text{end+1} = sprintf('\\bf{Timestamp}');
+metrics_text{end+1} = sprintf('%s', datestr(metadata.timestamp, 'dd-mmm-yyyy HH:MM:SS'));
 
 text(0.1, 0.9, metrics_text, 'FontSize', 10, 'VerticalAlignment', 'top', 'Interpreter', 'tex');
 
@@ -97,13 +124,17 @@ if ~exist(output_folder, 'dir')
 end
 
 fig_filename = sprintf('%s_%s_%s_%dkmh.png', ...
-    datestr(sim_data.Metadata.timestamp, 'yyyymmdd_HHMMSS'), ...
-    sim_data.Metadata.controller, ...
-    sim_data.Metadata.maneuver, ...
-    round(sim_data.Metadata.velocity_kmh));
+    datestr(metadata.timestamp, 'yyyymmdd_HHMMSS'), ...
+    metadata.controller, ...
+    metadata.maneuver, ...
+    round(metadata.velocity_kmh));
 
 fig_path = fullfile(output_folder, fig_filename);
-exportgraphics(fig, fig_path, 'Resolution', 300);
-fprintf('   Figura salva: %s\n', fig_path);
+try
+    exportgraphics(fig, fig_path, 'Resolution', 300);
+    fprintf('   Figura salva: %s\n', fig_path);
+catch
+    warning('Não foi possível salvar a figura usando exportgraphics.');
+end
 
 end
