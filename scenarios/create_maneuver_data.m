@@ -5,7 +5,7 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
 %   steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
 %
 % Entradas:
-%   maneuver_type - 'DLC', 'Fishhook', 'J-Turn', 'StepSteer'
+%   maneuver_type - 'DLC', 'Fishhook', 'J-Turn', 'StepSteer', 'Gaspar'
 %   sim_time      - Tempo total de simulacao (s)
 %   v_kmh         - Velocidade longitudinal (km/h) para calculos dependentes
 %
@@ -19,8 +19,8 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
     t = (0:dt:sim_time)';
     steer = zeros(size(t));
     
-    % Fator de esterçamento baseado no ISO e papers de referencia (ex: Khalil 2019)
-    % Valores em radianos no volante (wheel angle), ajuste ratio no Simulink se necessario
+    % Fator de esterçamento baseado no ISO e papers de referencia
+    % Valores em radianos no pneu (ajuste steering ratio no Simulink se for no volante)
     
     switch maneuver_type
         case 'DLC'
@@ -34,10 +34,21 @@ function steer_ts = create_maneuver_data(maneuver_type, sim_time, v_kmh)
                 end
             end
             
+        case 'Gaspar'
+            % Single Lane Change (Manobra padrão de validação Gaspar 2004)
+            % Onda senoidal simples de período T = 3s (ou 2s)
+            t_start = 1.0;
+            period = 3.0;
+            A = 0.05; % radianos nos pneus (~2.86 deg) comum na literatura de controle de HVs
+            for i = 1:length(t)
+                if t(i) >= t_start && t(i) < t_start + period
+                    steer(i) = A * sin(2*pi*(1/period)*(t(i)-t_start));
+                end
+            end
+
         case 'Fishhook'
             % NHTSA Fishhook (FMVSS 126)
-            % Referencia de magnitude: tipicamente 6.5 * steer_angle_at_0.3g
-            A = deg2rad(294); % Exemplo de amplitude agressiva
+            A = deg2rad(294);
             for i = 1:length(t)
                 if t(i) >= 1.0 && t(i) < 1.25
                     steer(i) = (t(i)-1.0)/0.25 * A;
