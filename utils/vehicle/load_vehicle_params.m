@@ -1,5 +1,5 @@
 function vehicle = load_vehicle_params(type)
-%LOAD_VEHICLE_PARAMS Carrega parâmetros do veículo Chevrolet Blazer 2001
+%LOAD_VEHICLE_PARAMS Carrega parâmetros do veículo
 %
 % Sintaxe:
 %   vehicle = load_vehicle_params(type)
@@ -11,12 +11,8 @@ function vehicle = load_vehicle_params(type)
 %   vehicle - Struct com 40 parâmetros físicos
 %
 % Referência:
-%   Khalil et al. (2019), SAE Int. J. Passeng. Cars, 12(1):35-50
-%   DOI: 10.4271/06-12-01-0003
-%
-% Exemplo:
-%   truck = load_vehicle_params('truck');
-%   fprintf('Massa: %.0f kg, SSF: %.2f\n', truck.m, truck.SSF);
+%   Gaspar et al. (2004) / Vu et al. (2016)
+%   Single Unit Heavy Vehicle (Caminhão Pesado)
 %
 % Vitor Yukio - UnB/PIBIC - 11/02/2026
 
@@ -32,9 +28,9 @@ function vehicle = load_vehicle_params(type)
             vehicle.Ixz = 4200;     % Produto de inércia yaw-roll (kg·m²)
             
             %% Geometria do Veículo
-            vehicle.h = 0.83;       % Altura CG massa suspensa (m)
+            vehicle.h = 0.83;       % Altura CG massa suspensa (m) [hr na vdd, ajuste feito abaixo]
             vehicle.hu = 0.53;      % Altura CG massa não suspensa (m)
-            vehicle.rf = 1.15;      % Altura eixo de rolagem frontal (m)
+            vehicle.rf = 1.15;      % Altura eixo de rolagem frontal (m) [h na vdd]
             vehicle.rr = 1.15;      % Altura eixo de rolagem traseiro (m)
             vehicle.lf = 1.95;      % Distância CG → eixo dianteiro (m)
             vehicle.lr = 1.54;      % Distância CG → eixo traseiro (m)
@@ -80,9 +76,9 @@ function vehicle = load_vehicle_params(type)
             vehicle.SSF = (vehicle.lw * 2) / (2 * vehicle.h); % Static Stability Factor
             
             %% Metadata
-            vehicle.name = 'Chevrolet Blazer 2001';
-            vehicle.reference = 'Khalil et al. (2019), SAE 2019-01-0003';
-            vehicle.dof = 14; % Modelo completo (6 sprung + 4 unsprung + 4 wheel)
+            vehicle.name = 'Single Unit Heavy Vehicle (Gaspar 2004 / Vu 2016)';
+            vehicle.reference = 'Gaspar et al. (2004), Vu et al. (2016)';
+            vehicle.dof = 14; 
             
         otherwise
             error('VehicleParams:InvalidType', ...
