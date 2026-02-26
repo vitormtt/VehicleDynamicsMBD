@@ -22,20 +22,35 @@ try
     elseif simOut.find('xout')
         % Fallback para xout se logsout não estiver perfeitamente nomeado
         xout = simOut.xout;
-        time = simOut.tout;
-        % indices aproximados para 5DOF (ajuste conforme seu state-space)
-        phi = xout(:,4); 
-        p = xout(:,5);
-        beta = xout(:,1); % ou uy/vx
-        r = xout(:,2);
+        if isa(xout, 'Simulink.SimulationData.Dataset')
+            % Se xout for um Dataset (comum em blocos State-Space modernos)
+            time = xout.get(1).Values.Time;
+            states = xout.get(1).Values.Data;
+        else
+            % Se for matriz direta
+            time = simOut.tout;
+            states = xout;
+        end
+        
+        % Garantir orientacao [T x N]
+        if size(states, 1) < size(states, 2)
+            states = states';
+        end
+        
+        % Indices Mapeados (Assumindo state-space [beta, r, phi, phi_dot, ...])
+        % Ajuste esses indices se a ordem do seu A,B,C,D for diferente!
+        beta = states(:,1);
+        r = states(:,2);
+        phi = states(:,3);
+        p = states(:,4);
         phi_uf = zeros(size(time)); % Placeholder se nao logado no xout
         phi_ur = zeros(size(time));
     else
         warning('Nenhum dado (logsout ou xout) encontrado no simOut.');
         return;
     end
-catch
-    warning('Falha ao extrair dados do simOut para plotagem.');
+catch ME
+    warning('Falha ao extrair dados do simOut para plotagem: %s', ME.message);
     return;
 end
 
