@@ -17,7 +17,7 @@ function results = run_5dof_simulation(varargin)
 %
 % Autor: Vitor Yukio - UnB/PIBIC
 % Data: 26/02/2026
-% Versão: 2.1 (MBD Compliant)
+% Versão: 2.1.1 (MBD Compliant with Metadata fix)
 
 %% ═══════════════════════════════════════════════════════
 %% PARSER DE ARGUMENTOS
@@ -40,7 +40,7 @@ fprintf('║        5-DOF VEHICLE DYNAMICS SIMULATION v2.1        ║\n');
 fprintf('╚═══════════════════════════════════════════════════════╝\n');
 fprintf('  Vehicle:     Chevrolet Blazer 2001\n');
 fprintf('  Model:       model_5dof.slx\n');
-fprintf('  Controller:  %s\n');
+fprintf('  Controller:  %s\n', controller);
 fprintf('  Maneuver:    %s\n', maneuver);
 fprintf('  Velocity:    %.1f km/h\n', velocity_kmh);
 fprintf('───────────────────────────────────────────────────────\n\n');
@@ -192,9 +192,18 @@ fprintf('   ✅ Simulação concluída\n\n');
 %% ═══════════════════════════════════════════════════════
 fprintf('6️⃣  Processando resultados...\n');
 
+% Criar Metadados da Simulacao
+metadata = struct();
+metadata.timestamp = now;
+metadata.vehicle = 'Chevrolet Blazer 2001';
+metadata.controller = controller;
+metadata.maneuver = maneuver;
+metadata.velocity_kmh = velocity_kmh;
+
 % Calcular métricas
 try
     metrics = calculate_performance_metrics_v2(results, controller);
+    metadata.metrics = metrics;
     fprintf('   RMS Roll Angle:    %.4f deg\n', metrics.rms_roll_deg);
     fprintf('   Max Roll Angle:    %.4f deg\n', metrics.max_roll_deg);
     fprintf('   Max NLT (front):   %.3f\n', metrics.max_nlt_f);
@@ -204,14 +213,14 @@ catch
     fprintf('   ⚠️  Não foi possivel calcular metricas (verifique formato do simOut)\n\n');
 end
 
-filepath = save_simulation_results(results);
+filepath = save_simulation_results(results, metadata);
 fprintf('   ✅ Resultados salvos em %s\n\n', filepath);
 
 try
-    plot_5dof_results_v2(results);
+    plot_5dof_results_v2(results, metadata);
     fprintf('   ✅ Gráficos gerados\n\n');
 catch
-    fprintf('   ⚠️  Não foi possivel gerar os graficos\n\n');
+    fprintf('   ⚠️  Não foi possivel gerar os graficos (pode ser incompatibilidade de struct)\n\n');
 end
 
 %% ═══════════════════════════════════════════════════════
