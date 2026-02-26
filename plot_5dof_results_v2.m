@@ -12,21 +12,30 @@ try
     has_logsout = isprop(simOut, 'logsout') && ~isempty(simOut.logsout);
     has_xout = isprop(simOut, 'xout') && ~isempty(simOut.xout);
 
-    if has_logsout && isa(simOut.logsout, 'Simulink.SimulationData.Dataset') && simOut.logsout.numElements > 0
+    % Se tiver logsout E ele possuir os nomes corretos (ex: 'phi')
+    if has_logsout && isa(simOut.logsout, 'Simulink.SimulationData.Dataset') && simOut.logsout.numElements > 0 && ~isempty(simOut.logsout.find('phi'))
         logs = simOut.logsout;
         time = logs.get(1).Values.Time;
-        % Assumindo que os nomes dos sinais estejam configurados no Simulink
-        phi = logs.getElement('phi').Values.Data;
-        r = logs.getElement('r').Values.Data;
-        phi_uf = logs.getElement('phi_uf').Values.Data;
-        phi_ur = logs.getElement('phi_ur').Values.Data;
-        beta = logs.getElement('beta').Values.Data;
-        p = logs.getElement('p').Values.Data;
+        
+        % Tenta extrair os sinais pelo nome
+        try
+            phi = logs.getElement('phi').Values.Data;
+            r = logs.getElement('r').Values.Data;
+            beta = logs.getElement('beta').Values.Data;
+            p = logs.getElement('p').Values.Data;
+            
+            % Unsprung mass pode nao existir no 5-DOF, usa zeros se falhar
+            try phi_uf = logs.getElement('phi_uf').Values.Data; catch, phi_uf = zeros(size(time)); end
+            try phi_ur = logs.getElement('phi_ur').Values.Data; catch, phi_ur = zeros(size(time)); end
+        catch
+            error('Falha ao ler os elementos pelo nome no logsout');
+        end
+        
     elseif has_xout
-        % Fallback para xout se logsout não estiver perfeitamente nomeado
+        % Fallback Seguro para xout
         xout = simOut.xout;
         if isa(xout, 'Simulink.SimulationData.Dataset')
-            % Se xout for um Dataset (comum em blocos State-Space modernos)
+            % Se xout for um Dataset (comum em blocos State-Space modernos sem nomear sinais)
             time = xout.get(1).Values.Time;
             states = xout.get(1).Values.Data;
         else
@@ -40,16 +49,15 @@ try
             states = states';
         end
         
-        % Indices Mapeados (Assumindo state-space [beta, r, phi, phi_dot, ...])
-        % Ajuste esses indices se a ordem do seu A,B,C,D for diferente!
+        % Indices Mapeados (Assumindo state-space: [beta, r, phi, p, ...])
         beta = states(:,1);
         r = states(:,2);
         phi = states(:,3);
         p = states(:,4);
-        phi_uf = zeros(size(time, 1), 1); % Placeholder se nao logado no xout
+        phi_uf = zeros(size(time, 1), 1); 
         phi_ur = zeros(size(time, 1), 1);
     else
-        warning('Nenhum dado (logsout ou xout) encontrado no simOut para plotar.');
+        warning('Nenhum dado válido (logsout nomeado ou xout) encontrado no simOut para plotar.');
         return;
     end
 catch ME
