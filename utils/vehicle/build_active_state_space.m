@@ -1,9 +1,7 @@
 function [sys] = build_active_state_space(vehicle, MAR, v)
 %BUILD_ACTIVE_STATE_SPACE Constrói matrizes A/B para modelo 5-DOF ativo
 %
-% Refatorado para corresponder exatamente à formulação original.
-% As forças dos pneus (Fyf, Fyr) são calculadas externamente no Simulink.
-% Entradas do State-Space: [Fyf, Fyr, Tm_f, Tm_r]
+% Refatorado para corresponder exatamente à formulação Vu et al. (2016)
 
     % Extração de parâmetros
     m = vehicle.m; ms = vehicle.ms; 
@@ -15,13 +13,16 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
     kf = vehicle.kf; kr = vehicle.kr;
     bf = vehicle.bf; br = vehicle.br;
     ktf = vehicle.ktf; ktr = vehicle.ktr;
+    kAO_f = vehicle.kAO_f; kAO_r = vehicle.kAO_r;
+    tAf = vehicle.tAf; tBf = vehicle.tBf; cf = vehicle.cf;
+    tAr = vehicle.tAr; tBr = vehicle.tBr; cr = vehicle.cr;
     g = 9.81;
     
-    % Momentos ARB Passiva
-    MARf_phi = MAR.f.phi;
-    MARr_phi = MAR.r.phi;
-    MARf_phi_uf = MAR.f.phi_u;
-    MARr_phi_ur = MAR.r.phi_u;
+    % Momentos ARB Passiva (CORREÇÃO CONFORME SEU CÓDIGO)
+    MARf_phi = (4 * kAO_f * ((tAf * tBf) / cf^2));
+    MARr_phi = (4 * kAO_r * ((tAr * tBr) / cr^2));
+    MARf_phi_uf = -(4 * kAO_f * (tAf^2 / cf^2));
+    MARr_phi_ur = -(4 * kAO_r * (tAr^2 / cr^2));
     
     % Definição da Matriz E
     E_mat = [ m*v,           0,   0,        -ms*h,             0,   0;
@@ -36,7 +37,7 @@ function [sys] = build_active_state_space(vehicle, MAR, v)
               0, 0,             0,                                             0,        0,                                     0;
               0, ms*v*h,        (ms*g*h) - (kf + MARf_phi) - (kr + MARr_phi), -bf - br, (kf + MARf_phi_uf),                    (kr + MARr_phi_ur);
               0, muf*v*(rf-hu), (kf + MARf_phi),                               bf,       (muf*g*hu) - ktf - (kf + MARf_phi_uf), 0;
-              0, mur*v*(rr-hu), (kr + MARr_phi),                               br,       0,                                     (-mur*g*hu) - ktr - (kr + MARr_phi_ur);
+              0, mur*v*(rr-hu), (kr + MARr_phi),                               br,       0,                                     (-mur*g*hu) - ktr - (kr + MARr_phi_ur); % CORREÇÃO: -mur*g*hu
               0, 0,             0,                                             -1,       0,                                     0];
               
     % Matriz H (Forças laterais como entradas)
