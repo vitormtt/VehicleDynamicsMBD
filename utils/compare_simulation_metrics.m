@@ -28,9 +28,16 @@ function compare_simulation_metrics()
     for i = 1:length(files)
         try
             data = load(fullfile(files(i).folder, files(i).name));
+            
+            % Tenta encontrar metadados de diferentes formas dependendo da versao do script
+            md = [];
             if isfield(data, 'metadata')
                 md = data.metadata;
-                
+            elseif isfield(data, 'sim_data') && isfield(data.sim_data, 'Metadata')
+                md = data.sim_data.Metadata;
+            end
+            
+            if ~isempty(md)
                 ctrl = md.controller;
                 man = md.maneuver;
                 vel = md.velocity_kmh;
@@ -38,7 +45,11 @@ function compare_simulation_metrics()
                 if isfield(md, 'metrics')
                     max_roll = md.metrics.max_roll_deg;
                     rms_roll = md.metrics.rms_roll_deg;
-                    exec_time = md.metrics.execution_time_s;
+                    if isfield(md.metrics, 'execution_time_s')
+                        exec_time = md.metrics.execution_time_s;
+                    else
+                        exec_time = NaN;
+                    end
                 else
                     max_roll = NaN;
                     rms_roll = NaN;
