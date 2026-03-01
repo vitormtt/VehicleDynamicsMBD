@@ -10,11 +10,15 @@ function generate_project_report()
 %   - Comparativo temporal (evolução do projeto)
 %
 % Autor: Vitor Yukio - UnB/PIBIC
-% Data: 13/02/2026
+% Data: 01/03/2026
 
 %% Configuração
 root_dir = pwd;
-report_file = fullfile(root_dir, 'project_report.txt');
+docs_dir = fullfile(root_dir, 'docs');
+if ~exist(docs_dir, 'dir')
+    mkdir(docs_dir);
+end
+report_file = fullfile(docs_dir, 'project_report.txt');
 fid = fopen(report_file, 'w');
 
 %% Cabeçalho
@@ -166,7 +170,7 @@ if sim_stats.num_simulations > 0
     fprintf(fid, '      Tempo exec. médio: %.2f s\n', sim_stats.avg_exec_time);
 else
     fprintf(fid, '⏳ Nenhuma simulação recente encontrada\n');
-    fprintf(fid, '   Execute: run_5dof_simulation(''Passive'', ''DLC'', 70)\n');
+    fprintf(fid, '   Execute a simulação correspondente ao modelo para ver os resultados\n');
 end
 fprintf(fid, '\n');
 
@@ -359,7 +363,7 @@ stats.by_maneuver = struct();
 stats.avg_roll_rms = NaN;
 stats.avg_exec_time = NaN;
 
-results_dir = fullfile(root_dir, 'results', '5dof');
+results_dir = fullfile(root_dir, 'results');
 if ~exist(results_dir, 'dir')
     return;
 end
