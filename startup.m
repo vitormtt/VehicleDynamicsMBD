@@ -18,7 +18,7 @@ else
     disp('✅ Simulink Project criado.');
 end
 
-% Força o diretório atual para a raiz do projeto (importante para evitar Current Folder errado)
+% Força o diretório atual para a raiz do projeto
 cd(aarbRoot);
 
 % ADICIONA TODAS AS PASTAS (recursivo)
@@ -29,6 +29,13 @@ for i = 1:length(projectFolders)
     if isfolder(folder)
         addpath(genpath(folder));
     end
+end
+
+% Configurar roteamento de cache/build do Simulink automaticamente
+try
+    configure_cache_folders();
+catch
+    warning('Script configure_cache_folders não encontrado. Cache pode gerar pastas soltas.');
 end
 
 % Tema Gráfico
