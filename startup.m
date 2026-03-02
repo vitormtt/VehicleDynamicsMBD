@@ -6,7 +6,6 @@ aarbRoot = fileparts(mfilename('fullpath'));
 if isempty(aarbRoot)
     aarbRoot = pwd;
 end
-cd(aarbRoot);
 
 % Simulink Project
 projFile = fullfile(aarbRoot, 'VehicleDynamicsMBD.prj');
@@ -18,6 +17,9 @@ else
     proj.Name = 'VehicleDynamicsMBD';
     disp('✅ Simulink Project criado.');
 end
+
+% Força o diretório atual para a raiz do projeto (importante para evitar Current Folder errado)
+cd(aarbRoot);
 
 % ADICIONA TODAS AS PASTAS (recursivo)
 projectFolders = {'data', 'models', 'utils', 'validation', ...
